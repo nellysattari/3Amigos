@@ -1,0 +1,22 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "cdnProfilePrefix": {
+            "value": "cdn-profile"
+        },
+        "cdnEndpointPrefix": {
+            "value": "cdn-endpoint"
+        },
+        "cdnSku": {
+            "value": "Standard_Microsoft"
+        },
+        "storageAccountPrefix": {
+            "value": "blobwebdev"
+        },
+        "storageContainerName": {
+            "value": "home"
+        }
+        
+    }
+}

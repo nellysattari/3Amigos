@@ -1,0 +1,213 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "location": {
+        "type": "string",
+        "defaultValue": "[resourceGroup().location]",
+        "metadata": {
+          "description": "Location for all resources."
+        }
+      },
+      "cdnProfilePrefix": {
+        "type": "string",
+        "metadata": {
+          "description": "Prefix of CDN Profile"
+        }
+      },
+      "cdnEndpointPrefix": {
+        "type": "string",
+        "metadata": {
+          "description": "Prefix of CDN Endpoint"
+        }
+      },
+      "cdnSku": {
+        "type": "string",
+        "metadata": {
+          "description": "CDN SKU names"
+        },
+        "defaultValue": "Standard_Microsoft",
+        "allowedValues": [
+          "Standard_Microsoft"
+        ]
+      },
+      "storageAccountPrefix": {
+        "type": "string",
+        "metadata": {
+          "description": "Prefix of Storage Account"
+        }
+      },
+      "storageContainerName": {
+        "type": "string",
+        "metadata": {
+          "description": "Name of Storage Container"
+        }
+      } 
+    },
+    "variables": {
+      "storageAccountName": "[concat(parameters('storageAccountPrefix'), uniqueString(resourceGroup().id))]",
+      "cdnProfileName": "[concat(parameters('cdnProfilePrefix'), '-', variables('storageAccountName'))]",
+      "cdnEndpointName": "[concat(parameters('cdnEndpointPrefix'), '-', variables('storageAccountName'))]"
+    },
+    "resources": [
+      {
+        "type": "Microsoft.Storage/storageAccounts",
+        "name": "[variables('storageAccountName')]",
+        "apiVersion": "2019-06-01",
+        "location": "[parameters('location')]",
+        "tags": {
+          "Description": "[variables('storageAccountName')]",
+          "ApplicationName": "3 Amigos",
+          "BusinessUnit": "Digital Technology Services",
+          "Owner": "Nelly Sattari"
+        },
+        "kind": "StorageV2",
+        "sku": {
+          "name": "Standard_LRS",
+          "tier": "Standard"
+        },
+        "properties": {
+          "accessTier": "Hot"
+        },
+        "resources": [
+          {
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2019-06-01",
+            "name": "[concat(variables('storageAccountName'),'/default/',parameters('storageContainerName'))]",
+            "dependsOn": [
+              "[variables('storageAccountName')]"
+            ],
+            "properties": {
+                "publicAccess": "Blob"
+            }
+          }
+        ]
+
+      },
+       
+      {
+        "name": "[variables('cdnProfileName')]",
+        "type": "Microsoft.Cdn/profiles",
+        "location": "[parameters('location')]",
+        "apiVersion": "2016-04-02",
+        "tags": {
+          "Description": "[variables('cdnProfileName')]",
+          "ApplicationName": "3 Amigos",
+          "BusinessUnit": "Digital Technology Services",
+          "Owner": "Nelly Sattari"
+        },
+        "sku": {
+          "name": "[parameters('cdnSku')]"
+        },
+        "properties": {},
+        "resources": [
+          {
+            "apiVersion": "2019-06-15-preview",
+            "name": "[variables('cdnEndpointName')]",
+            "type": "endpoints",
+            "dependsOn": [
+              "[variables('cdnProfileName')]",
+              "[variables('storageAccountName')]"
+            ],
+            "location": "[parameters('location')]",
+            "tags": {
+              "displayName": "[variables('cdnEndpointName')]"
+            },
+            "properties": {
+              "originHostHeader": "[replace(replace(reference(variables('storageAccountName')).primaryEndpoints.blob,'https://',''),'/','')]",
+              "originPath": "[concat('/',parameters('storageContainerName'))]",
+              "isHttpAllowed": true,
+              "isHttpsAllowed": true,
+              "queryStringCachingBehavior": "IgnoreQueryString",
+              "contentTypesToCompress": [
+                "text/plain",
+                "text/html",
+                "text/css",
+                "application/x-javascript",
+                "text/javascript"
+              ],
+              "isCompressionEnabled": true,
+              "deliveryPolicy": {
+                  "rules": [
+                      {
+                          "name": "EnforceHTTPS",
+                          "order": 1,
+                          "conditions": [
+                              {
+                                  "name": "RequestScheme",
+                                  "parameters": {
+                                      "@odata.type": "#Microsoft.Azure.Cdn.Models.DeliveryRuleRequestSchemeConditionParameters",
+                                      "operator": "Equal",
+                                      "negateCondition": false,
+                                      "matchValues": [
+                                          "HTTP"
+                                      ]
+                                  }
+                              }
+                          ],
+                          "actions": [
+                              {
+                                  "name": "UrlRedirect",
+                                  "parameters": {
+                                      "@odata.type": "#Microsoft.Azure.Cdn.Models.DeliveryRuleUrlRedirectActionParameters",
+                                      "redirectType": "Found",
+                                      "destinationProtocol": "Https"
+                                  }
+                              }
+                          ]
+                      },
+                      {
+                          "name": "RouteIndex",
+                          "order": 2,
+                          "conditions": [
+                              {
+                                  "name": "UrlFileExtension",
+                                  "parameters": {
+                                      "@odata.type": "#Microsoft.Azure.Cdn.Models.DeliveryRuleUrlFileExtensionMatchConditionParameters",
+                                      "operator": "LessThan",
+                                      "negateCondition": false,
+                                      "matchValues": [
+                                          "1"
+                                      ],
+                                      "transforms": []
+                                  }
+                              }
+                          ],
+                          "actions": [
+                              {
+                                  "name": "UrlRewrite",
+                                  "parameters": {
+                                      "@odata.type": "#Microsoft.Azure.Cdn.Models.DeliveryRuleUrlRewriteActionParameters",
+                                      "sourcePattern": "/",
+                                      "destination": "/index.html",
+                                      "preserveUnmatchedPath": false
+                                  }
+                              }
+                          ]
+                      }
+                  ]
+              },
+              "origins": [
+                {
+                  "name": "origin1",
+                  "properties": {
+                    "hostName": "[replace(replace(reference(variables('storageAccountName')).primaryEndpoints.blob,'https://',''),'/','')]"                 
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "hostName": {
+        "type": "string",
+        "value": "[reference(variables('cdnEndpointName')).hostName]"
+      },
+      "originHostHeader": {
+        "type": "string",
+        "value": "[reference(variables('cdnEndpointName')).originHostHeader]"
+      }
+    }
+  }
