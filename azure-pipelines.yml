@@ -1,0 +1,31 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- script: echo Hello, world!
+  displayName: 'Run a one-line script'
+
+- script: |
+    echo Add other tasks to build, test, and deploy your project.
+    echo See https://aka.ms/yaml
+  displayName: 'Run a multi-line script'
+- task: AzureResourceManagerTemplateDeployment@3
+  inputs:
+    deploymentScope: 'Resource Group'
+    azureResourceManagerConnection: 'Microsoft Azure Sponsorship(b4eda31c-a629-4b57-9947-2675976d1af0)'
+    subscriptionId: 'b4eda31c-a629-4b57-9947-2675976d1af0'
+    action: 'Create Or Update Resource Group'
+    resourceGroupName: '3amigosRG'
+    location: 'Australia East'
+    templateLocation: 'Linked artifact'
+    csmFile: '100-cdn.json'
+    csmParametersFile: '100-cdn-dev.parameters.json'
+    deploymentMode: 'Incremental'
