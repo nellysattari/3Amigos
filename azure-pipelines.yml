@@ -25,7 +25,10 @@ steps:
     action: 'Create Or Update Resource Group'
     resourceGroupName: '3amigosRG'
     location: 'Australia East'
-    templateLocation: 'Linked artifact'
-    csmFile: '100-cdn.json'
-    csmParametersFile: '100-cdn-dev.parameters.json'
-    deploymentMode: 'Incremental'
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: 'Microsoft Azure Sponsorship(b4eda31c-a629-4b57-9947-2675976d1af0)'
+    scriptType: 'batch'
+    scriptLocation: 'inlineScript'
+    inlineScript: 'az deployment group create --resource-group 3amigosRG --parameters 100-cdn-dev.parameters.json --template-file 100-cdn.json --debug'
+    
